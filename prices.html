@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>计件单价管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-tags"></i> 计件单价管理</h1>
+        <p>管理产品编码、名称和计件单价</p>
+    </header>
+
+    <nav class="nav-links">
+        <a href="index.html" class="nav-link"><i class="fas fa-home"></i> 记账</a>
+        <a href="prices.html" class="nav-link"><i class="fas fa-tags"></i> 单价管理</a>
+        <a href="employees.html" class="nav-link"><i class="fas fa-users"></i> 人员管理</a>
+    </nav>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-plus-circle"></i> 新增产品</h2>
+
+        <div class="form-group">
+            <label for="product-code"><i class="fas fa-barcode"></i> 产品编码</label>
+            <input type="text" id="product-code" placeholder="输入产品编码">
+        </div>
+
+        <div class="form-group">
+            <label for="product-name"><i class="fas fa-cube"></i> 产品名称</label>
+            <input type="text" id="product-name" placeholder="输入产品名称">
+        </div>
+
+        <div class="form-group">
+            <label for="product-price"><i class="fas fa-dollar-sign"></i> 计件单价（元）</label>
+            <input type="number" id="product-price" step="0.01" placeholder="输入单价">
+        </div>
+
+        <div class="form-actions">
+            <button id="add-btn" class="btn-primary">
+                <i class="fas fa-plus"></i> 添加产品
+            </button>
+            <button id="import-btn" class="btn-secondary">
+                <i class="fas fa-file-import"></i> Excel导入
+            </button>
+        </div>
+
+        <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;">
+    </section>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-list"></i> 产品列表</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;"><i class="fas fa-info-circle"></i> 点击行可编辑产品信息</p>
+
+        <div id="loading" class="loading" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            <p>加载中...</p>
+        </div>
+
+        <div id="products-table-container">
+            <table id="products-table" style="display: none;">
+                <thead>
+                <tr>
+                    <th>产品编码</th>
+                    <th>产品名称</th>
+                    <th>单价（元）</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="products-body">
+                </tbody>
+            </table>
+
+            <div id="empty-message" class="empty-message">
+                <i class="fas fa-boxes" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                <p>暂无产品数据，请添加或导入</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        <p>每日记账系统 &copy; 2023</p>
+    </div>
+</div>
+
+<!-- 编辑弹窗 -->
+<div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px;">
+        <h3 style="margin-bottom: 20px;">编辑产品</h3>
+
+        <div class="form-group">
+            <label>产品编码</label>
+            <input type="text" id="edit-code" readonly style="background: #f5f5f5;">
+        </div>
+
+        <div class="form-group">
+            <label>产品名称</label>
+            <input type="text" id="edit-name">
+        </div>
+
+        <div class="form-group">
+            <label>单价（元）</label>
+            <input type="number" id="edit-price" step="0.01">
+        </div>
+
+        <div class="form-actions">
+            <button id="save-edit-btn" class="btn-primary">
+                <i class="fas fa-save"></i> 保存
+            </button>
+            <button id="cancel-edit-btn" class="btn-secondary">
+                <i class="fas fa-times"></i> 取消
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { products } from './js/db.js'
+
+    let productList = []
+    let editingId = null
+
+    const addBtn = document.getElementById('add-btn')
+    const importBtn = document.getElementById('import-btn')
+    const fileInput = document.getElementById('file-input')
+    const productsBody = document.getElementById('products-body')
+    const productsTable = document.getElementById('products-table')
+    const emptyMessage = document.getElementById('empty-message')
+    const loadingDiv = document.getElementById('loading')
+
+    // 弹窗元素
+    const editModal = document.getElementById('edit-modal')
+    const editCode = document.getElementById('edit-code')
+    const editName = document.getElementById('edit-name')
+    const editPrice = document.getElementById('edit-price')
+    const saveEditBtn = document.getElementById('save-edit-btn')
+    const cancelEditBtn = document.getElementById('cancel-edit-btn')
+
+    // 加载产品列表
+    async function loadProducts() {
+        loadingDiv.style.display = 'block'
+        productsTable.style.display = 'none'
+        emptyMessage.style.display = 'none'
+
+        try {
+            productList = await products.list()
+            renderProducts()
+        } catch (error) {
+            console.error('加载产品失败:', error)
+        } finally {
+            loadingDiv.style.display = 'none'
+        }
+    }
+
+    // 渲染产品列表
+    function renderProducts() {
+        productsBody.innerHTML = ''
+
+        if (productList.length === 0) {
+            productsTable.style.display = 'none'
+            emptyMessage.style.display = 'block'
+            return
+        }
+
+        productsTable.style.display = 'table'
+        emptyMessage.style.display = 'none'
+
+        productList.forEach(prod => {
+            const row = document.createElement('tr')
+            row.style.cursor = 'pointer'
+            row.innerHTML = `
+                <td>${prod.code}</td>
+                <td>${prod.name}</td>
+                <td>${parseFloat(prod.price).toFixed(2)}</td>
+                <td>
+                    <button class="delete-btn" data-id="${prod.id}"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            `
+
+            // 点击行编辑
+            row.addEventListener('click', function(e) {
+                if (!e.target.closest('.delete-btn')) {
+                    openEditModal(prod)
+                }
+            })
+
+            row.querySelector('.delete-btn').addEventListener('click', async function() {
+                if (confirm('确定要删除这个产品吗？')) {
+                    try {
+                        await products.delete(prod.id)
+                        productList = productList.filter(p => p.id !== prod.id)
+                        renderProducts()
+                    } catch (error) {
+                        console.error('删除失败:', error)
+                        alert('删除失败，请重试')
+                    }
+                }
+            })
+
+            productsBody.appendChild(row)
+        })
+    }
+
+    // 添加产品
+    async function addProduct() {
+        const code = document.getElementById('product-code').value.trim()
+        const name = document.getElementById('product-name').value.trim()
+        const price = parseFloat(document.getElementById('product-price').value)
+
+        if (!code) {
+            alert('请输入产品编码')
+            return
+        }
+
+        if (!name) {
+            alert('请输入产品名称')
+            return
+        }
+
+        if (!price || price < 0) {
+            alert('请输入有效的单价')
+            return
+        }
+
+        try {
+            await products.add({ code, name, price })
+
+            // 清空表单
+            document.getElementById('product-code').value = ''
+            document.getElementById('product-name').value = ''
+            document.getElementById('product-price').value = ''
+
+            await loadProducts()
+            alert('添加成功！')
+        } catch (error) {
+            console.error('添加失败:', error)
+            alert('添加失败，请检查编码是否重复')
+        }
+    }
+
+    // Excel导入
+    importBtn.addEventListener('click', () => fileInput.click())
+
+    fileInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0]
+        if (!file) return
+
+        try {
+            const data = await readExcel(file)
+            const records = []
+
+            // 跳过表头，从第二行开始解析
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i]
+                if (row[0] && row[1] && row[2] !== undefined) {
+                    records.push({
+                        code: String(row[0]),
+                        name: String(row[1]),
+                        price: parseFloat(row[2]) || 0
+                    })
+                }
+            }
+
+            if (records.length === 0) {
+                alert('未找到有效的数据行，请检查Excel格式')
+                return
+            }
+
+            await products.importBatch(records)
+            await loadProducts()
+            alert(`成功导入 ${records.length} 条产品数据！`)
+        } catch (error) {
+            console.error('导入失败:', error)
+            alert('导入失败，请检查Excel格式是否正确')
+        }
+
+        fileInput.value = ''
+    })
+
+    // 读取Excel文件
+    function readExcel(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = e => {
+                try {
+                    const data = new Uint8Array(e.target.result)
+                    const workbook = XLSX.read(data, { type: 'array' })
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
+                    resolve(jsonData)
+                } catch (error) {
+                    reject(error)
+                }
+            }
+            reader.onerror = reject
+            reader.readAsArrayBuffer(file)
+        })
+    }
+
+    // 打开编辑弹窗
+    function openEditModal(product) {
+        editingId = product.id
+        editCode.value = product.code
+        editName.value = product.name
+        editPrice.value = product.price
+        editModal.style.display = 'block'
+    }
+
+    // 关闭编辑弹窗
+    function closeEditModal() {
+        editingId = null
+        editModal.style.display = 'none'
+    }
+
+    // 保存编辑
+    async function saveEdit() {
+        if (!editingId) return
+
+        const name = editName.value.trim()
+        const price = parseFloat(editPrice.value)
+
+        if (!name) {
+            alert('请输入产品名称')
+            return
+        }
+
+        if (!price || price < 0) {
+            alert('请输入有效的单价')
+            return
+        }
+
+        try {
+            await products.update(editingId, { name, price })
+            closeEditModal()
+            await loadProducts()
+            alert('保存成功！')
+        } catch (error) {
+            console.error('保存失败:', error)
+            alert('保存失败，请重试')
+        }
+    }
+
+    // 事件监听
+    addBtn.addEventListener('click', addProduct)
+    saveEditBtn.addEventListener('click', saveEdit)
+    cancelEditBtn.addEventListener('click', closeEditModal)
+
+    // 点击弹窗外部关闭
+    editModal.addEventListener('click', function(e) {
+        if (e.target === editModal) {
+            closeEditModal()
+        }
+    })
+
+    // 初始化
+    loadProducts()
+</script>
+</body>
+</html>

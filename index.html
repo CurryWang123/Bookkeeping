@@ -5,1084 +5,494 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日记账</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 引入SheetJS库用于生成Excel文件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-        }
-        
-        body {
-            background-color: #f5f7fa;
-            color: #333;
-            line-height: 1.6;
-            padding: 15px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        header {
-            text-align: center;
-            padding: 20px 15px;
-            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
-            color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-bottom: 10px;
-        }
-        
-        header h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-        
-        header p {
-            font-size: 0.95rem;
-            opacity: 0.9;
-        }
-        
-        .input-section {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            padding: 20px;
-        }
-        
-        .section-title {
-            font-size: 1.3rem;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #4b6cb7;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .section-title i {
-            color: #4b6cb7;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 0.95rem;
-        }
-        
-        select, input {
-            width: 100%;
-            padding: 14px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        select:focus, input:focus {
-            outline: none;
-            border-color: #4b6cb7;
-            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
-        }
-        
-        .date-info {
-            background-color: #f1f7ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .date-info .form-group {
-            margin-bottom: 0;
-        }
-        
-        /* 改进日期选择器样式 */
-        .date-container {
-            position: relative;
-        }
-        
-        .date-input-custom {
-            width: 100%;
-            padding: 14px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            background-color: white;
-            cursor: pointer;
-        }
-        
-        .date-input-custom:hover {
-            border-color: #4b6cb7;
-        }
-        
-        .date-icon {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #4b6cb7;
-            pointer-events: none;
-        }
-        
-        #date {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        
-        .date-display {
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .date-placeholder {
-            color: #999;
-        }
-        
-        .product-info {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .product-info .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .price-info {
-            background-color: #f1f7ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .price-info .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .return-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-        }
-        
-        .return-group label {
-            margin-bottom: 0;
-            font-weight: normal;
-            font-size: 0.95rem;
-        }
-        
-        .return-checkbox {
-            width: 20px;
-            height: 20px;
-            accent-color: #4b6cb7;
-        }
-        
-        .form-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 25px;
-        }
-        
-        button {
-            padding: 16px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex: 1;
-            min-width: 120px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(to right, #4b6cb7, #182848);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: #f1f1f1;
-            color: #333;
-        }
-        
-        .btn-export {
-            background: linear-gradient(to right, #28a745, #20c997);
-            color: white;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .btn-primary:hover {
-            background: linear-gradient(to right, #3a5999, #121f3d);
-        }
-        
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        
-        .btn-export:hover {
-            background: linear-gradient(to right, #218838, #1da57c);
-        }
-        
-        .output-section {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            padding: 20px;
-            margin-top: 10px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
-        
-        th {
-            background-color: #f8f9fa;
-            padding: 14px 10px;
-            text-align: left;
-            font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-        
-        .total-row {
-            font-weight: bold;
-            background-color: #f1f7ff;
-        }
-        
-        .total-row td {
-            border-top: 2px solid #4b6cb7;
-        }
-        
-        .delete-btn {
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 6px 10px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-        
-        .delete-btn:hover {
-            background: #ff5252;
-        }
-        
-        .empty-message {
-            text-align: center;
-            padding: 30px 15px;
-            color: #999;
-            font-style: italic;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #777;
-            font-size: 0.85rem;
-        }
-        
-        /* 手机端优化 */
-        @media (max-width: 500px) {
-            body {
-                padding: 10px;
-            }
-            
-            header h1 {
-                font-size: 1.6rem;
-            }
-            
-            .input-section, .output-section {
-                padding: 15px;
-            }
-            
-            button {
-                padding: 14px 16px;
-                font-size: 0.95rem;
-            }
-            
-            th, td {
-                padding: 10px 8px;
-                font-size: 0.85rem;
-            }
-        }
-        
-        /* 商品编码自动完成 */
-        .autocomplete {
-            position: relative;
-        }
-        
-        .autocomplete-items {
-            position: absolute;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            border-top: none;
-            z-index: 99;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: white;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .autocomplete-item {
-            padding: 12px 15px;
-            cursor: pointer;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .autocomplete-item:hover {
-            background-color: #f1f7ff;
-        }
-        
-        .autocomplete-active {
-            background-color: #4b6cb7 !important;
-            color: white;
-        }
-        
-        .readonly-input {
-            background-color: #f9f9f9;
-            color: #666;
-        }
-        
-        .amount-input {
-            font-weight: bold;
-            color: #2c3e50;
-            background-color: #f1f7ff;
-        }
-        
-        .price-input {
-            font-weight: bold;
-            color: #2c3e50;
-            background-color: #f9f9f9;
-        }
-        
-        .amount-result {
-            font-weight: bold;
-            color: #d32f2f;
-            background-color: #ffebee;
-        }
-        
-        .return-tag {
-            background-color: #ffebee;
-            color: #d32f2f;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-calculator"></i> 每日记账</h1>
-            <p>快速记录每日销售与支出，支持Excel导出</p>
-        </header>
-        
-        <section class="input-section">
-            <h2 class="section-title"><i class="fas fa-edit"></i> 新增记录</h2>
-            
-            <div class="date-info">
-                <div class="form-group">
-                    <label for="date">日期</label>
-                    <div class="date-container">
-                        <div class="date-input-custom">
-                            <span id="date-display" class="date-display">今天</span>
-                            <span id="date-placeholder" class="date-placeholder"></span>
-                        </div>
-                        <div class="date-icon">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <input type="date" id="date">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="name-select"><i class="fas fa-user"></i> 选择姓名</label>
-                <select id="name-select">
-                    <option value="">请选择姓名</option>
-                    <option value="郭美丽">郭美丽</option>
-                    <option value="林连治">林连治</option>
-                    <option value="廖永丽">廖永丽</option>
-                    <option value="周水锦">周水锦</option>
-                    <option value="王雪娥">王雪娥</option>
-                </select>
-            </div>
-            
-            <div class="product-info">
-                <h3 style="margin-bottom: 15px; color: #4b6cb7; font-size: 1.1rem;"><i class="fas fa-box"></i> 产品信息</h3>
-                
-                <div class="form-group">
-                    <label for="product-code">商品编码</label>
-                    <div class="autocomplete">
-                        <input type="text" id="product-code" placeholder="输入或选择商品编码">
-                        <div id="autocomplete-list" class="autocomplete-items" style="display: none;"></div>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="product-name">产品名称</label>
-                    <input type="text" id="product-name" class="readonly-input" placeholder="根据商品编码自动填写" readonly>
-                </div>
-            </div>
-            
-            <div class="price-info">
-                <h3 style="margin-bottom: 15px; color: #4b6cb7; font-size: 1.1rem;"><i class="fas fa-money-bill-wave"></i> 价格信息</h3>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="quantity">数量</label>
-                        <input type="number" id="quantity" min="1" value="1" placeholder="输入数量">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="price">单价（元）</label>
-                        <input type="number" id="price" class="price-input" readonly placeholder="根据产品名称自动填写">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="amount">金额（元）</label>
-                        <input type="number" id="amount" class="amount-result" readonly placeholder="自动计算（数量×单价）">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="return-group">
-                <input type="checkbox" id="return-checkbox" class="return-checkbox">
-                <label for="return-checkbox">退返（勾选此项标记为退返商品）</label>
-            </div>
-            
-            <div class="form-actions">
-                <button id="add-btn" class="btn-primary">
-                    <i class="fas fa-plus-circle"></i> 添加记录
-                </button>
-                <button id="reset-btn" class="btn-secondary">
-                    <i class="fas fa-redo"></i> 重置
-                </button>
-                <button id="export-btn" class="btn-export">
-                    <i class="fas fa-file-excel"></i> 导出Excel
-                </button>
-            </div>
-        </section>
-        
-        <section class="output-section">
-            <h2 class="section-title"><i class="fas fa-list-alt"></i> 记录列表</h2>
-            
-            <div id="records-container">
-                <table id="records-table" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>日期</th>
-                            <th>姓名</th>
-                            <th>产品名称</th>
-                            <th>商品编码</th>
-                            <th>数量</th>
-                            <th>单价</th>
-                            <th>金额</th>
-                            <th>退返</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="records-body">
-                        <!-- 记录将在这里动态添加 -->
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="6" style="text-align: right;">总计：</td>
-                            <td id="total-amount">0.00</td>
-                            <td colspan="2"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-                
-                <div id="empty-message" class="empty-message">
-                    <i class="fas fa-clipboard-list" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
-                    <p>暂无记账记录，请添加第一条记录</p>
-                </div>
-            </div>
-        </section>
-        
-        <div class="footer">
-            <p>每日记账系统 &copy; 2023 | 支持Excel导出功能</p>
-        </div>
-    </div>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-calculator"></i> 每日记账</h1>
+        <p>快速记录每日销售与支出，支持Excel导出</p>
+    </header>
 
-    <script>
-        // 商品编码与产品名称、单价映射
-        const productMappings = {
-            "备菜架A款/黑色/5层": { name: "备菜架", price: 0.4 },
-            "备菜架A款/白色/5层": { name: "备菜架", price: 0.4 },
-            "备菜架A款/金色/5层": { name: "备菜架", price: 0.4 },
-            "迷齐边几/奶白/带灯/35*35cm": { name: "迷齐边几35", price: 3.5 },
-            "迷齐边几/黑色/带灯/35*35cm": { name: "迷齐边几35", price: 3.5 }
-        };
-        
-        // 存储所有记录的数据
-        let allRecords = [];
-        
-        // 改进的日期选择器
-        const dateInput = document.getElementById('date');
-        const dateDisplay = document.getElementById('date-display');
-        const datePlaceholder = document.getElementById('date-placeholder');
-        
-        // 设置默认日期为今天
-        function setDefaultDate() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`;
-            dateInput.value = todayStr;
-            
-            // 显示友好的日期格式
-            const friendlyDate = `${year}年${month}月${day}日`;
-            dateDisplay.textContent = friendlyDate;
-            dateDisplay.classList.remove('date-placeholder');
-            dateDisplay.classList.add('date-display');
-            
-            // 隐藏占位符
-            datePlaceholder.textContent = '';
+    <nav class="nav-links">
+        <a href="index.html" class="nav-link"><i class="fas fa-home"></i> 记账</a>
+        <a href="prices.html" class="nav-link"><i class="fas fa-tags"></i> 单价管理</a>
+        <a href="employees.html" class="nav-link"><i class="fas fa-users"></i> 人员管理</a>
+    </nav>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-edit"></i> 新增记录</h2>
+
+        <div class="form-group">
+            <label for="month-select"><i class="fas fa-calendar"></i> 查看月份</label>
+            <input type="month" id="month-select">
+        </div>
+
+        <div class="date-info">
+            <div class="form-group">
+                <label for="date">日期</label>
+                <div class="date-container">
+                    <div class="date-input-custom">
+                        <span id="date-display" class="date-display">今天</span>
+                    </div>
+                    <div class="date-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <input type="date" id="date">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="name-select"><i class="fas fa-user"></i> 选择姓名</label>
+            <select id="name-select">
+                <option value="">请选择姓名</option>
+            </select>
+        </div>
+
+        <div class="product-info">
+            <h3 style="margin-bottom: 15px; color: #4b6cb7; font-size: 1.1rem;"><i class="fas fa-box"></i> 产品信息</h3>
+
+            <div class="form-group">
+                <label for="product-input"><i class="fas fa-cube"></i> 选择产品</label>
+                <input type="text" id="product-input" list="products-list" placeholder="搜索或选择产品">
+                <datalist id="products-list"></datalist>
+            </div>
+
+            <div class="form-group">
+                <label for="price">单价（元）</label>
+                <input type="number" id="price" class="price-input" step="0.01" placeholder="自动显示单价">
+            </div>
+        </div>
+
+        <div class="price-info">
+            <h3 style="margin-bottom: 15px; color: #4b6cb7; font-size: 1.1rem;"><i class="fas fa-money-bill-wave"></i> 价格信息</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="quantity">数量</label>
+                    <input type="number" id="quantity" min="1" value="1" placeholder="输入数量">
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">金额（元）</label>
+                    <input type="number" id="amount" class="amount-result" readonly placeholder="自动计算">
+                </div>
+            </div>
+        </div>
+
+        <div class="return-group">
+            <input type="checkbox" id="return-checkbox" class="return-checkbox">
+            <label for="return-checkbox">退返（勾选此项标记为退返商品）</label>
+        </div>
+
+        <div class="form-actions">
+            <button id="add-btn" class="btn-primary">
+                <i class="fas fa-plus-circle"></i> 添加记录
+            </button>
+            <button id="reset-btn" class="btn-secondary">
+                <i class="fas fa-redo"></i> 重置
+            </button>
+            <button id="export-btn" class="btn-export">
+                <i class="fas fa-file-excel"></i> 导出Excel
+            </button>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-list-alt"></i> 记录列表</h2>
+
+        <div id="loading" class="loading" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            <p>加载中...</p>
+        </div>
+
+        <div id="records-container">
+            <table id="records-table" style="display: none;">
+                <thead>
+                <tr>
+                    <th style="width: 70px;">日期</th>
+                    <th style="width: 55px;">姓名</th>
+                    <th>产品</th>
+                    <th style="width: 40px;">数量</th>
+                    <th style="width: 50px;">单价</th>
+                    <th style="width: 55px;">金额</th>
+                    <th style="width: 45px;">退返</th>
+                    <th style="width: 40px;">操作</th>
+                </tr>
+                </thead>
+                <tbody id="records-body">
+                </tbody>
+                <tfoot>
+                <tr class="total-row">
+                    <td colspan="5" style="text-align: right;">总计：</td>
+                    <td id="total-amount">0.00</td>
+                    <td colspan="2"></td>
+                </tr>
+                </tfoot>
+            </table>
+
+            <div id="empty-message" class="empty-message">
+                <i class="fas fa-clipboard-list" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                <p>暂无记账记录，请添加第一条记录</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        <p>每日记账系统 &copy; 2023 | 支持Excel导出功能</p>
+    </div>
+</div>
+
+<script type="module">
+    import { supabase } from './js/supabase.js'
+    import { employees, products, salesRecords } from './js/db.js'
+
+    // 全局数据
+    let allRecords = []
+    let employeeList = []
+    let productList = []
+
+    // DOM元素
+    const dateInput = document.getElementById('date')
+    const dateDisplay = document.getElementById('date-display')
+    const monthSelect = document.getElementById('month-select')
+    const nameSelect = document.getElementById('name-select')
+    const productInput = document.getElementById('product-input')
+    const productsDatalist = document.getElementById('products-list')
+    const quantityInput = document.getElementById('quantity')
+    const priceInput = document.getElementById('price')
+    const amountInput = document.getElementById('amount')
+    const returnCheckbox = document.getElementById('return-checkbox')
+    const addButton = document.getElementById('add-btn')
+    const exportButton = document.getElementById('export-btn')
+    const recordsBody = document.getElementById('records-body')
+    const emptyMessage = document.getElementById('empty-message')
+    const recordsTable = document.getElementById('records-table')
+    const loadingDiv = document.getElementById('loading')
+
+    // 设置默认日期
+    function setDefaultDate() {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(today.getDate()).padStart(2, '0')
+        const todayStr = `${year}-${month}-${day}`
+        dateInput.value = todayStr
+
+        const friendlyDate = `${year}年${month}月${day}日`
+        dateDisplay.textContent = friendlyDate
+    }
+
+    // 设置默认月份
+    function setDefaultMonth() {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        monthSelect.value = `${year}-${month}`
+    }
+
+    // 加载员工列表
+    async function loadEmployees() {
+        try {
+            employeeList = await employees.list()
+            nameSelect.innerHTML = '<option value="">请选择姓名</option>'
+            employeeList.forEach(emp => {
+                const option = document.createElement('option')
+                option.value = emp.id
+                option.textContent = emp.name
+                nameSelect.appendChild(option)
+            })
+        } catch (error) {
+            console.error('加载员工失败:', error)
         }
-        
-        // 初始化日期
-        setDefaultDate();
-        
-        // 日期选择变化事件
-        dateInput.addEventListener('change', function() {
-            const selectedDate = new Date(this.value);
-            const today = new Date();
-            
-            // 判断是否是今天
-            if (selectedDate.toDateString() === today.toDateString()) {
-                dateDisplay.textContent = '今天';
-            } else {
-                const year = selectedDate.getFullYear();
-                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                const day = String(selectedDate.getDate()).padStart(2, '0');
-                const friendlyDate = `${year}年${month}月${day}日`;
-                dateDisplay.textContent = friendlyDate;
-            }
-            
-            dateDisplay.classList.remove('date-placeholder');
-            dateDisplay.classList.add('date-display');
-            datePlaceholder.textContent = '';
-        });
-        
-        // 点击自定义日期区域触发原生日期选择器
-        document.querySelector('.date-input-custom').addEventListener('click', function() {
-            dateInput.showPicker ? dateInput.showPicker() : dateInput.focus();
-        });
-        
-        // 获取DOM元素
-        const quantityInput = document.getElementById('quantity');
-        const priceInput = document.getElementById('price');
-        const amountInput = document.getElementById('amount');
-        const productCodeInput = document.getElementById('product-code');
-        const productNameInput = document.getElementById('product-name');
-        const autocompleteList = document.getElementById('autocomplete-list');
-        const returnCheckbox = document.getElementById('return-checkbox');
-        
-        // 自动计算金额
-        function calculateAmount() {
-            const quantity = parseFloat(quantityInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-            const amount = quantity * price;
-            amountInput.value = amount.toFixed(2);
+    }
+
+    // 加载产品列表
+    async function loadProducts() {
+        try {
+            productList = await products.list()
+            productsDatalist.innerHTML = ''
+            productList.forEach(prod => {
+                const option = document.createElement('option')
+                option.value = `${prod.code} - ${prod.name} (${prod.price}元)`
+                option.dataset.id = prod.id
+                option.dataset.price = prod.price
+                option.dataset.name = prod.name
+                option.dataset.code = prod.code
+                productsDatalist.appendChild(option)
+            })
+        } catch (error) {
+            console.error('加载产品失败:', error)
         }
-        
-        // 商品编码自动完成功能
-        // 商品编码列表
-        const productCodes = Object.keys(productMappings);
-        
-        // 显示自动完成列表
-        function showAutocomplete() {
-            const input = productCodeInput.value.toLowerCase();
-            autocompleteList.innerHTML = '';
-            
-            if (!input) {
-                autocompleteList.style.display = 'none';
-                return;
-            }
-            
-            const filteredCodes = productCodes.filter(code => 
-                code.toLowerCase().includes(input)
-            );
-            
-            if (filteredCodes.length === 0) {
-                autocompleteList.style.display = 'none';
-                return;
-            }
-            
-            filteredCodes.forEach(code => {
-                const item = document.createElement('div');
-                item.className = 'autocomplete-item';
-                item.innerHTML = `<strong>${code}</strong><br><small>${productMappings[code].name} - 单价: ${productMappings[code].price}元</small>`;
-                item.addEventListener('click', function() {
-                    productCodeInput.value = code;
-                    productNameInput.value = productMappings[code].name;
-                    priceInput.value = productMappings[code].price;
-                    // 自动计算金额
-                    calculateAmount();
-                    autocompleteList.style.display = 'none';
-                });
-                autocompleteList.appendChild(item);
-            });
-            
-            autocompleteList.style.display = 'block';
+    }
+
+    // 产品选择事件
+    productInput.addEventListener('input', function() {
+        const selectedOption = Array.from(productsDatalist.options).find(opt => opt.value === this.value)
+        if (selectedOption && selectedOption.dataset.price) {
+            priceInput.value = selectedOption.dataset.price
+            calculateAmount()
         }
-        
-        // 输入商品编码时自动匹配产品名称和单价
-        function updateProductInfo() {
-            const code = productCodeInput.value.trim();
-            
-            // 精确匹配
-            if (productMappings[code]) {
-                productNameInput.value = productMappings[code].name;
-                priceInput.value = productMappings[code].price;
-                calculateAmount();
-                return;
-            }
-            
-            // 模糊匹配
-            for (const key in productMappings) {
-                if (key.includes(code) || code.includes(key)) {
-                    productNameInput.value = productMappings[key].name;
-                    priceInput.value = productMappings[key].price;
-                    calculateAmount();
-                    return;
-                }
-            }
-            
-            // 没有匹配到
-            productNameInput.value = '';
-            priceInput.value = '';
-            amountInput.value = '';
+    })
+
+    // 加载销售记录
+    async function loadRecords() {
+        const month = monthSelect.value
+        loadingDiv.style.display = 'block'
+        recordsTable.style.display = 'none'
+        emptyMessage.style.display = 'none'
+
+        try {
+            const data = await salesRecords.list(month)
+            allRecords = data || []
+            renderRecords()
+        } catch (error) {
+            console.error('加载记录失败:', error)
+            allRecords = []
+        } finally {
+            loadingDiv.style.display = 'none'
         }
-        
-        // 事件监听
-        productCodeInput.addEventListener('input', function() {
-            updateProductInfo();
-            showAutocomplete();
-        });
-        
-        quantityInput.addEventListener('input', calculateAmount);
-        
-        // 点击页面其他地方时隐藏自动完成列表
-        document.addEventListener('click', function(e) {
-            if (e.target !== productCodeInput) {
-                autocompleteList.style.display = 'none';
-            }
-        });
-        
-        // 添加记录
-        const addButton = document.getElementById('add-btn');
-        const recordsBody = document.getElementById('records-body');
-        const emptyMessage = document.getElementById('empty-message');
-        const recordsTable = document.getElementById('records-table');
-        
-        // 示例数据（可选）
-        const sampleData = [
-            { date: new Date().toISOString().split('T')[0], name: '郭美丽', product: '备菜架', code: '备菜架A款/白色/5层', quantity: 2, price: 0.4, amount: 0.80, return: '' },
-            { date: new Date().toISOString().split('T')[0], name: '林连治', product: '迷齐边几35', code: '迷齐边几/黑色/带灯/35*35cm', quantity: 1, price: 3.5, amount: 3.50, return: '是' },
-            { date: new Date().toISOString().split('T')[0], name: '王雪娥', product: '备菜架', code: '备菜架A款/金色/5层', quantity: 3, price: 0.4, amount: 1.20, return: '' }
-        ];
-        
-        // 加载示例数据
-        function loadSampleData() {
-            sampleData.forEach(item => {
-                addRecordToTable(item);
-                // 同时添加到全局数据
-                allRecords.push(item);
-            });
-            updateTotal();
-            toggleTableVisibility();
+    }
+
+    // 渲染记录列表
+    function renderRecords() {
+        recordsBody.innerHTML = ''
+
+        if (allRecords.length === 0) {
+            recordsTable.style.display = 'none'
+            emptyMessage.style.display = 'block'
+            document.getElementById('total-amount').textContent = '0.00'
+            return
         }
-        
-        // 添加记录到表格
-        function addRecordToTable(record) {
-            const row = document.createElement('tr');
-            
-            // 格式化退返显示
-            const returnDisplay = record.return === '是' ? '<span class="return-tag">退返</span>' : '';
-            
+
+        recordsTable.style.display = 'table'
+        emptyMessage.style.display = 'none'
+
+        let total = 0
+
+        allRecords.forEach(record => {
+            const row = document.createElement('tr')
+            const employeeName = record.employee?.name || ''
+            const productName = record.product?.name || ''
+            const productCode = record.product?.code || ''
+            const productPrice = parseFloat(record.unit_price) || 0
+            const amount = parseFloat(record.total_amount) || 0
+            total += amount
+
+            const returnDisplay = record.is_return ? '<span class="return-tag">退返</span>' : ''
+
             row.innerHTML = `
-                <td>${record.date}</td>
-                <td>${record.name}</td>
-                <td>${record.product}</td>
-                <td>${record.code}</td>
+                <td>${record.record_date}</td>
+                <td>${employeeName}</td>
+                <td>${productName}</td>
                 <td>${record.quantity}</td>
-                <td>${record.price.toFixed(2)}</td>
-                <td>${record.amount.toFixed(2)}</td>
+                <td>${productPrice.toFixed(2)}</td>
+                <td>${amount.toFixed(2)}</td>
                 <td>${returnDisplay}</td>
-                <td><button class="delete-btn"><i class="fas fa-trash-alt"></i></button></td>
-            `;
-            
-            // 添加删除功能
-            row.querySelector('.delete-btn').addEventListener('click', function() {
-                // 从全局数据中删除
-                const index = allRecords.findIndex(r => 
-                    r.date === record.date && 
-                    r.name === record.name && 
-                    r.code === record.code && 
-                    r.quantity === record.quantity
-                );
-                if (index !== -1) {
-                    allRecords.splice(index, 1);
+                <td style="text-align: center;"><button class="delete-btn" data-id="${record.id}" title="删除"><i class="fas fa-times"></i></button></td>
+            `
+
+            row.querySelector('.delete-btn').addEventListener('click', async function() {
+                if (confirm('确定要删除这条记录吗？')) {
+                    try {
+                        await salesRecords.delete(record.id)
+                        allRecords = allRecords.filter(r => r.id !== record.id)
+                        renderRecords()
+                    } catch (error) {
+                        console.error('删除失败:', error)
+                        alert('删除失败，请重试')
+                    }
                 }
-                
-                row.remove();
-                updateTotal();
-                toggleTableVisibility();
-            });
-            
-            recordsBody.appendChild(row);
+            })
+
+            recordsBody.appendChild(row)
+        })
+
+        document.getElementById('total-amount').textContent = total.toFixed(2)
+    }
+
+    // 自动计算金额
+    function calculateAmount() {
+        const quantity = parseFloat(quantityInput.value) || 0
+        const price = parseFloat(priceInput.value) || 0
+        amountInput.value = (quantity * price).toFixed(2)
+    }
+
+    // 添加记录
+    async function addRecord() {
+        const employeeId = nameSelect.value
+        const productInputValue = productInput.value
+        const quantity = parseFloat(quantityInput.value)
+        const price = parseFloat(priceInput.value)
+        const amount = parseFloat(amountInput.value)
+        const isReturn = returnCheckbox.checked
+
+        if (!dateInput.value) {
+            alert('请选择日期')
+            return
         }
-        
-        // 更新总金额
-        function updateTotal() {
-            const rows = recordsBody.querySelectorAll('tr');
-            let total = 0;
-            
-            rows.forEach(row => {
-                const amountCell = row.cells[6];
-                total += parseFloat(amountCell.textContent) || 0;
-            });
-            
-            document.getElementById('total-amount').textContent = total.toFixed(2);
+
+        if (!employeeId) {
+            alert('请选择姓名')
+            return
         }
-        
-        // 切换表格可见性
-        function toggleTableVisibility() {
-            const hasRecords = recordsBody.children.length > 0;
-            recordsTable.style.display = hasRecords ? 'table' : 'none';
-            emptyMessage.style.display = hasRecords ? 'none' : 'block';
+
+        // 通过输入值查找对应的产品
+        const selectedOption = Array.from(productsDatalist.options).find(opt => opt.value === productInputValue)
+        if (!selectedOption || !selectedOption.dataset.id) {
+            alert('请从列表中选择产品')
+            return
         }
-        
-        // 添加记录按钮事件
-        addButton.addEventListener('click', function() {
-            const date = dateInput.value;
-            const name = document.getElementById('name-select').value;
-            const product = productNameInput.value;
-            const code = productCodeInput.value;
-            const quantity = parseFloat(quantityInput.value);
-            const price = parseFloat(priceInput.value);
-            const amount = parseFloat(amountInput.value);
-            const isReturn = returnCheckbox.checked ? "是" : "";
-            
-            // 验证输入
-            if (!date) {
-                alert('请选择日期');
-                dateInput.focus();
-                return;
-            }
-            
-            if (!name) {
-                alert('请选择姓名');
-                document.getElementById('name-select').focus();
-                return;
-            }
-            
-            if (!code) {
-                alert('请输入商品编码');
-                productCodeInput.focus();
-                return;
-            }
-            
-            if (!product) {
-                alert('商品编码不正确，无法识别产品名称');
-                productCodeInput.focus();
-                return;
-            }
-            
-            if (!quantity || quantity <= 0) {
-                alert('请输入有效的数量');
-                quantityInput.focus();
-                return;
-            }
-            
-            if (!price || price < 0) {
-                alert('单价获取失败，请检查商品编码');
-                productCodeInput.focus();
-                return;
-            }
-            
-            // 创建记录对象
-            const record = {
-                date,
-                name,
-                product,
-                code,
+
+        const productId = parseInt(selectedOption.dataset.id)
+
+        if (!quantity || quantity <= 0) {
+            alert('请输入有效的数量')
+            return
+        }
+
+        try {
+            await salesRecords.add({
+                employee_id: parseInt(employeeId),
+                product_id: productId,
+                record_date: dateInput.value,
                 quantity,
-                price,
-                amount,
-                return: isReturn
-            };
-            
-            // 添加到表格
-            addRecordToTable(record);
-            
-            // 添加到全局数据
-            allRecords.push(record);
-            
-            // 更新总计
-            updateTotal();
-            
-            // 切换表格可见性
-            toggleTableVisibility();
-            
-            // 重置表单（保留日期）
-            document.getElementById('name-select').value = '';
-            productCodeInput.value = '';
-            productNameInput.value = '';
-            quantityInput.value = 1;
-            priceInput.value = '';
-            amountInput.value = '';
-            returnCheckbox.checked = false;
-            productCodeInput.focus();
-        });
-        
-        // 重置表单
-        document.getElementById('reset-btn').addEventListener('click', function() {
-            document.getElementById('name-select').value = '';
-            productCodeInput.value = '';
-            productNameInput.value = '';
-            quantityInput.value = 1;
-            priceInput.value = '';
-            amountInput.value = '';
-            returnCheckbox.checked = false;
-            setDefaultDate();
-            dateInput.focus();
-        });
-        
-        // 格式化日期为"几月几日"格式
-        function formatDateToMonthDay(dateStr) {
-            const date = new Date(dateStr);
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            return `${month}月${day}日`;
+                unit_price: price,
+                total_amount: amount,
+                is_return: isReturn
+            })
+
+            // 重置表单
+            nameSelect.value = ''
+            productInput.value = ''
+            quantityInput.value = 1
+            priceInput.value = ''
+            amountInput.value = ''
+            returnCheckbox.checked = false
+
+            // 重新加载记录
+            await loadRecords()
+
+            alert('添加成功！')
+        } catch (error) {
+            console.error('添加失败:', error)
+            alert('添加失败，请重试')
         }
-        
-        // 导出Excel功能 - 按姓名分组
-        document.getElementById('export-btn').addEventListener('click', function() {
-            if (allRecords.length === 0) {
-                alert('没有记录可导出！');
-                return;
-            }
-            
-            try {
-                // 按姓名分组
-                const groupedData = {};
-                const nameOrder = ['郭美丽', '林连治', '廖永丽', '周水锦', '王雪娥'];
-                
-                // 初始化分组
-                nameOrder.forEach(name => {
-                    groupedData[name] = [];
-                });
-                
-                // 将记录分组
-                allRecords.forEach(record => {
-                    if (groupedData[record.name]) {
-                        groupedData[record.name].push(record);
-                    } else {
-                        // 如果姓名不在预设列表中，则创建一个新组
-                        groupedData[record.name] = [record];
-                    }
-                });
-                
-                // 创建工作簿
-                const wb = XLSX.utils.book_new();
-                
-                // 为每个姓名创建工作表
-                for (const name in groupedData) {
-                    if (groupedData[name].length === 0) continue; // 跳过没有记录的姓名
-                    
-                    // 准备数据 - 使用二维数组格式以便设置样式
-                    const data = [];
-                    
-                    // 添加表头行 - 表头加粗
-                    data.push([
-                        { v: '日期', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '姓名', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '产品名称', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '商品编码', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '数量', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '单价', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '金额', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } },
-                        { v: '备注', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'center' } } }
-                    ]);
-                    
-                    // 添加数据行 - 内容居中但未加粗
-                    groupedData[name].forEach(record => {
-                        data.push([
-                            { v: formatDateToMonthDay(record.date), t: 's', s: { alignment: { horizontal: 'center' } } },
-                            { v: record.name, t: 's', s: { alignment: { horizontal: 'center' } } },
-                            { v: record.product, t: 's', s: { alignment: { horizontal: 'center' } } },
-                            { v: record.code, t: 's', s: { alignment: { horizontal: 'center' } } },
-                            { v: record.quantity, t: 'n', s: { alignment: { horizontal: 'center' } } },
-                            { v: record.price, t: 'n', s: { alignment: { horizontal: 'center' }, numFmt: '0.00' } },
-                            { v: record.amount, t: 'n', s: { alignment: { horizontal: 'center' }, numFmt: '0.00' } },
-                            { v: record.return === '是' ? '退返' : '', t: 's', s: { alignment: { horizontal: 'center' } } }
-                        ]);
-                    });
-                    
-                    // 计算该工作表的总金额
-                    const totalAmount = groupedData[name].reduce((sum, record) => sum + record.amount, 0);
-                    
-                    // 添加总计行
-                    data.push([
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } },
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } },
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } },
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } },
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } },
-                        { v: '总计：', t: 's', s: { font: { bold: true }, alignment: { horizontal: 'right' } } },
-                        { v: totalAmount, t: 'n', s: { font: { bold: true }, alignment: { horizontal: 'center' }, numFmt: '0.00' } },
-                        { v: '', t: 's', s: { alignment: { horizontal: 'center' } } }
-                    ]);
-                    
-                    // 创建二维数组的值部分和样式部分
-                    const values = data.map(row => row.map(cell => cell.v));
-                    const styles = data.map(row => row.map(cell => cell.s));
-                    
-                    // 创建工作表
-                    const ws = XLSX.utils.aoa_to_sheet(values);
-                    
-                    // 设置列宽
-                    const wscols = [
-                        { wch: 10 }, // 日期
-                        { wch: 8 },  // 姓名
-                        { wch: 12 }, // 产品名称
-                        { wch: 20 }, // 商品编码
-                        { wch: 8 },  // 数量
-                        { wch: 8 },  // 单价
-                        { wch: 10 }, // 金额
-                        { wch: 8 }   // 备注
-                    ];
-                    ws['!cols'] = wscols;
-                    
-                    // 设置样式（SheetJS社区版对样式支持有限，这里尽量设置）
-                    const range = XLSX.utils.decode_range(ws['!ref']);
-                    for (let R = range.s.r; R <= range.e.r; ++R) {
-                        for (let C = range.s.c; C <= range.e.c; ++C) {
-                            const cell_address = { c: C, r: R };
-                            const cell_ref = XLSX.utils.encode_cell(cell_address);
-                            
-                            if (!ws[cell_ref]) continue;
-                            
-                            // 应用样式
-                            if (styles[R] && styles[R][C]) {
-                                ws[cell_ref].s = styles[R][C];
-                            }
-                        }
-                    }
-                    
-                    // 将工作表添加到工作簿，工作表名称为姓名（截断到31个字符以内）
-                    const sheetName = name.length > 31 ? name.substring(0, 31) : name;
-                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    // 格式化日期为 x月x日 格式
+    function formatDateToMonthDay(dateStr) {
+        const date = new Date(dateStr)
+        return `${date.getMonth() + 1}月${date.getDate()}日`
+    }
+
+    // 导出Excel
+    function exportExcel() {
+        if (allRecords.length === 0) {
+            alert('没有记录可导出！')
+            return
+        }
+
+        try {
+            // 按姓名分组
+            const groupedData = {}
+
+            allRecords.forEach(record => {
+                const name = record.employee?.name || '未知'
+                if (!groupedData[name]) {
+                    groupedData[name] = []
                 }
-                
-                // 生成文件名
-                const today = new Date();
-                const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
-                const filename = `记账记录_${dateStr}.xlsx`;
-                
-                // 导出文件
-                XLSX.writeFile(wb, filename);
-                
-                // 统计信息
-                let totalRecords = 0;
-                let sheetCount = 0;
-                for (const name in groupedData) {
-                    if (groupedData[name].length > 0) {
-                        totalRecords += groupedData[name].length;
-                        sheetCount++;
-                    }
-                }
-                
-                alert(`已成功导出 ${totalRecords} 条记录到 ${filename}，共 ${sheetCount} 个工作表`);
-            } catch (error) {
-                console.error('导出Excel失败:', error);
-                alert('导出Excel失败，请检查控制台错误信息或尝试刷新页面重试。');
+                groupedData[name].push(record)
+            })
+
+            const wb = XLSX.utils.book_new()
+
+            for (const name in groupedData) {
+                const records = groupedData[name]
+                const data = []
+
+                // 表头：日期、姓名、产品名称、商品编码、数量、单价、金额、备注
+                data.push(['日期', '姓名', '产品名称', '商品编码', '数量', '单价', '金额', '备注'])
+
+                // 数据行
+                records.forEach(r => {
+                    data.push([
+                        formatDateToMonthDay(r.record_date),
+                        name,
+                        r.product?.name || '',
+                        r.product?.code || '',
+                        r.quantity,
+                        r.unit_price,
+                        r.total_amount,
+                        r.is_return ? '退返' : ''
+                    ])
+                })
+
+                // 总计行
+                const total = records.reduce((sum, r) => sum + parseFloat(r.total_amount || 0), 0)
+                data.push(['', '', '', '', '', '总计：', total, ''])
+
+                const ws = XLSX.utils.aoa_to_sheet(data)
+                ws['!cols'] = [{ wch: 8 }, { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 8 }]
+
+                const sheetName = name.length > 31 ? name.substring(0, 31) : name
+                XLSX.utils.book_append_sheet(wb, ws, sheetName)
             }
-        });
-        
-        // 页面加载时加载示例数据
-        document.addEventListener('DOMContentLoaded', function() {
-            // 加载示例数据
-            loadSampleData();
-            
-            // 初始切换表格可见性
-            toggleTableVisibility();
-            
-            // 检查XLSX库是否加载成功
-            if (typeof XLSX === 'undefined') {
-                console.error('XLSX库加载失败，Excel导出功能将不可用');
-                alert('警告：Excel导出库加载失败，请检查网络连接或刷新页面重试。');
-            }
-        });
-    </script>
+
+            const month = monthSelect.value || '全部'
+            const filename = `记账记录_${month}.xlsx`
+            XLSX.writeFile(wb, filename)
+
+            alert(`导出成功！共 ${allRecords.length} 条记录`)
+        } catch (error) {
+            console.error('导出失败:', error)
+            alert('导出失败，请重试')
+        }
+    }
+
+    // 事件监听
+    document.querySelector('.date-input-custom').addEventListener('click', function() {
+        dateInput.showPicker ? dateInput.showPicker() : dateInput.focus()
+    })
+
+    dateInput.addEventListener('change', function() {
+        const selectedDate = new Date(this.value)
+        const year = selectedDate.getFullYear()
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+        const day = String(selectedDate.getDate()).padStart(2, '0')
+        dateDisplay.textContent = `${year}年${month}月${day}日`
+    })
+
+    monthSelect.addEventListener('change', loadRecords)
+
+    quantityInput.addEventListener('input', calculateAmount)
+    priceInput.addEventListener('input', calculateAmount)
+
+    addButton.addEventListener('click', addRecord)
+
+    document.getElementById('reset-btn').addEventListener('click', function() {
+        nameSelect.value = ''
+        productInput.value = ''
+        quantityInput.value = 1
+        priceInput.value = ''
+        amountInput.value = ''
+        returnCheckbox.checked = false
+        setDefaultDate()
+    })
+
+    exportButton.addEventListener('click', exportExcel)
+
+    // 初始化
+    async function init() {
+        setDefaultDate()
+        setDefaultMonth()
+        await Promise.all([loadEmployees(), loadProducts()])
+        await loadRecords()
+    }
+
+    init()
+</script>
 </body>
 </html>

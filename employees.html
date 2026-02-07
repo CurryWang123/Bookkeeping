@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>人员信息管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-users"></i> 人员信息管理</h1>
+        <p>管理记账人员信息</p>
+    </header>
+
+    <nav class="nav-links">
+        <a href="index.html" class="nav-link"><i class="fas fa-home"></i> 记账</a>
+        <a href="prices.html" class="nav-link"><i class="fas fa-tags"></i> 单价管理</a>
+        <a href="employees.html" class="nav-link"><i class="fas fa-users"></i> 人员管理</a>
+    </nav>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-user-plus"></i> 新增人员</h2>
+
+        <div class="form-group">
+            <label for="employee-name"><i class="fas fa-user"></i> 姓名</label>
+            <input type="text" id="employee-name" placeholder="输入姓名">
+        </div>
+
+        <div class="form-actions">
+            <button id="add-btn" class="btn-primary">
+                <i class="fas fa-plus"></i> 添加人员
+            </button>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="section-title"><i class="fas fa-list"></i> 人员列表</h2>
+
+        <div id="loading" class="loading" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            <p>加载中...</p>
+        </div>
+
+        <div id="employees-table-container">
+            <table id="employees-table" style="display: none;">
+                <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>添加时间</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="employees-body">
+                </tbody>
+            </table>
+
+            <div id="empty-message" class="empty-message">
+                <i class="fas fa-user-friends" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
+                <p>暂无人员数据，请添加</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="footer">
+        <p>每日记账系统 &copy; 2023</p>
+    </div>
+</div>
+
+<script type="module">
+    import { employees } from './js/db.js'
+
+    let employeeList = []
+
+    const addBtn = document.getElementById('add-btn')
+    const employeeNameInput = document.getElementById('employee-name')
+    const employeesBody = document.getElementById('employees-body')
+    const employeesTable = document.getElementById('employees-table')
+    const emptyMessage = document.getElementById('empty-message')
+    const loadingDiv = document.getElementById('loading')
+
+    // 加载人员列表
+    async function loadEmployees() {
+        loadingDiv.style.display = 'block'
+        employeesTable.style.display = 'none'
+        emptyMessage.style.display = 'none'
+
+        try {
+            employeeList = await employees.list()
+            renderEmployees()
+        } catch (error) {
+            console.error('加载人员失败:', error)
+        } finally {
+            loadingDiv.style.display = 'none'
+        }
+    }
+
+    // 渲染人员列表
+    function renderEmployees() {
+        employeesBody.innerHTML = ''
+
+        if (employeeList.length === 0) {
+            employeesTable.style.display = 'none'
+            emptyMessage.style.display = 'block'
+            return
+        }
+
+        employeesTable.style.display = 'table'
+        emptyMessage.style.display = 'none'
+
+        employeeList.forEach(emp => {
+            const row = document.createElement('tr')
+            const createdAt = new Date(emp.created_at).toLocaleString('zh-CN')
+
+            row.innerHTML = `
+                <td>${emp.name}</td>
+                <td>${createdAt}</td>
+                <td>
+                    <button class="delete-btn" data-id="${emp.id}"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            `
+
+            row.querySelector('.delete-btn').addEventListener('click', async function() {
+                if (confirm(`确定要删除 "${emp.name}" 吗？\n注意：删除人员后，该人员的记账记录仍会保留，但无法在新增时选择。`)) {
+                    try {
+                        await employees.delete(emp.id)
+                        employeeList = employeeList.filter(e => e.id !== emp.id)
+                        renderEmployees()
+                    } catch (error) {
+                        console.error('删除失败:', error)
+                        alert('删除失败，请重试')
+                    }
+                }
+            })
+
+            employeesBody.appendChild(row)
+        })
+    }
+
+    // 添加人员
+    async function addEmployee() {
+        const name = employeeNameInput.value.trim()
+
+        if (!name) {
+            alert('请输入姓名')
+            return
+        }
+
+        // 检查是否已存在
+        if (employeeList.some(e => e.name === name)) {
+            alert('该姓名已存在')
+            return
+        }
+
+        try {
+            await employees.add(name)
+
+            // 清空表单
+            employeeNameInput.value = ''
+
+            await loadEmployees()
+            alert('添加成功！')
+        } catch (error) {
+            console.error('添加失败:', error)
+            alert('添加失败，请检查姓名是否重复')
+        }
+    }
+
+    // 事件监听
+    addBtn.addEventListener('click', addEmployee)
+
+    employeeNameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addEmployee()
+        }
+    })
+
+    // 初始化
+    loadEmployees()
+</script>
+</body>
+</html>
