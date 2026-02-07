@@ -55,6 +55,16 @@
         <h2 class="section-title"><i class="fas fa-list"></i> 产品列表</h2>
         <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;"><i class="fas fa-info-circle"></i> 点击行可编辑产品信息</p>
 
+        <div id="batch-actions" style="display: none; margin-bottom: 15px;">
+            <label style="display: inline-flex; align-items: center; gap: 8px; margin-right: 15px;">
+                <input type="checkbox" id="select-all">
+                <span>全选</span>
+            </label>
+            <button id="batch-delete-btn" class="btn-danger" style="padding: 10px 15px; font-size: 0.9rem;">
+                <i class="fas fa-trash"></i> 删除选中 (<span id="selected-count">0</span>)
+            </button>
+        </div>
+
         <div id="loading" class="loading" style="display: none;">
             <i class="fas fa-spinner"></i>
             <p>加载中...</p>
@@ -64,6 +74,7 @@
             <table id="products-table" style="display: none;">
                 <thead>
                 <tr>
+                    <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
                     <th>产品编码</th>
                     <th>产品名称</th>
                     <th>单价（元）</th>
@@ -161,17 +172,20 @@
 
         if (productList.length === 0) {
             productsTable.style.display = 'none'
+            document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
             return
         }
 
         productsTable.style.display = 'table'
+        document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
         productList.forEach(prod => {
             const row = document.createElement('tr')
             row.style.cursor = 'pointer'
             row.innerHTML = `
+                <td><input type="checkbox" class="product-checkbox" data-id="${prod.id}"></td>
                 <td>${prod.code}</td>
                 <td>${prod.name}</td>
                 <td>${parseFloat(prod.price).toFixed(2)}</td>
@@ -180,9 +194,9 @@
                 </td>
             `
 
-            // 点击行编辑
+            // 点击行编辑（排除复选框和删除按钮）
             row.addEventListener('click', function(e) {
-                if (!e.target.closest('.delete-btn')) {
+                if (!e.target.closest('.delete-btn') && e.target.type !== 'checkbox') {
                     openEditModal(prod)
                 }
             })
@@ -354,6 +368,72 @@
             closeEditModal()
         }
     })
+
+    // 更新选中数量
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.product-checkbox:checked')
+        document.getElementById('selected-count').textContent = checkboxes.length
+    }
+
+    // 批量删除选中产品
+    async function batchDeleteProducts() {
+        const checkboxes = document.querySelectorAll('.product-checkbox:checked')
+        if (checkboxes.length === 0) {
+            alert('请先选择要删除的产品')
+            return
+        }
+
+        if (!confirm(`确定要删除选中的 ${checkboxes.length} 个产品吗？`)) {
+            return
+        }
+
+        const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id))
+
+        try {
+            for (const id of selectedIds) {
+                await products.delete(id)
+            }
+            productList = productList.filter(p => !selectedIds.includes(p.id))
+            renderProducts()
+            alert(`成功删除 ${selectedIds.length} 个产品`)
+        } catch (error) {
+            console.error('批量删除失败:', error)
+            alert('删除失败，请重试')
+        }
+    }
+
+    // 全选复选框（表格头部）
+    document.getElementById('select-all-header').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.product-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 全选复选框（批量操作栏）
+    document.getElementById('select-all').addEventListener('change', function() {
+        const headerCheckbox = document.getElementById('select-all-header')
+        headerCheckbox.checked = this.checked
+        const checkboxes = document.querySelectorAll('.product-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 表格内复选框点击事件
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('product-checkbox')) {
+            updateSelectedCount()
+            const allCheckboxes = document.querySelectorAll('.product-checkbox')
+            const checkedBoxes = document.querySelectorAll('.product-checkbox:checked')
+            const headerCheckbox = document.getElementById('select-all-header')
+            const topCheckbox = document.getElementById('select-all')
+            const allChecked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length
+            headerCheckbox.checked = allChecked
+            topCheckbox.checked = allChecked
+        }
+    })
+
+    // 批量删除按钮
+    document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteProducts)
 
     // 初始化
     loadProducts()

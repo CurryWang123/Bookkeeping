@@ -55,9 +55,19 @@
             <h3 style="margin-bottom: 15px; color: #4b6cb7; font-size: 1.1rem;"><i class="fas fa-box"></i> 产品信息</h3>
 
             <div class="form-group">
-                <label for="product-input"><i class="fas fa-cube"></i> 选择产品</label>
-                <input type="text" id="product-input" list="products-list" placeholder="搜索或选择产品">
-                <datalist id="products-list"></datalist>
+                <label for="product-code"><i class="fas fa-barcode"></i> 商品编码</label>
+                <div class="autocomplete">
+                    <input type="text" id="product-code" placeholder="输入或选择商品编码">
+                    <div id="autocomplete-list-code" class="autocomplete-items" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="product-name"><i class="fas fa-tag"></i> 产品名称</label>
+                <div class="autocomplete">
+                    <input type="text" id="product-name" list="products-list" placeholder="输入或选择产品名称">
+                    <datalist id="products-list"></datalist>
+                </div>
             </div>
 
             <div class="form-group">
@@ -109,24 +119,34 @@
         </div>
 
         <div id="records-container">
+            <div id="batch-actions" style="display: none; margin-bottom: 15px;">
+                <label style="display: inline-flex; align-items: center; gap: 8px; margin-right: 15px;">
+                    <input type="checkbox" id="select-all">
+                    <span>全选</span>
+                </label>
+                <button id="batch-delete-btn" class="btn-danger" style="padding: 10px 15px; font-size: 0.9rem;">
+                    <i class="fas fa-trash"></i> 删除选中 (<span id="selected-count">0</span>)
+                </button>
+            </div>
             <table id="records-table" style="display: none;">
                 <thead>
                 <tr>
-                    <th style="width: 70px;">日期</th>
-                    <th style="width: 55px;">姓名</th>
+                    <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
+                    <th style="width: 65px;">日期</th>
+                    <th style="width: 50px;">姓名</th>
                     <th>产品</th>
-                    <th style="width: 40px;">数量</th>
-                    <th style="width: 50px;">单价</th>
-                    <th style="width: 55px;">金额</th>
-                    <th style="width: 45px;">退返</th>
-                    <th style="width: 40px;">操作</th>
+                    <th style="width: 35px;">数量</th>
+                    <th style="width: 45px;">单价</th>
+                    <th style="width: 50px;">金额</th>
+                    <th style="width: 40px;">退返</th>
+                    <th style="width: 35px;">操作</th>
                 </tr>
                 </thead>
                 <tbody id="records-body">
                 </tbody>
                 <tfoot>
                 <tr class="total-row">
-                    <td colspan="5" style="text-align: right;">总计：</td>
+                    <td colspan="6" style="text-align: right;">总计：</td>
                     <td id="total-amount">0.00</td>
                     <td colspan="2"></td>
                 </tr>
@@ -159,8 +179,10 @@
     const dateDisplay = document.getElementById('date-display')
     const monthSelect = document.getElementById('month-select')
     const nameSelect = document.getElementById('name-select')
-    const productInput = document.getElementById('product-input')
+    const productCodeInput = document.getElementById('product-code')
+    const productNameInput = document.getElementById('product-name')
     const productsDatalist = document.getElementById('products-list')
+    const autocompleteListCode = document.getElementById('autocomplete-list-code')
     const quantityInput = document.getElementById('quantity')
     const priceInput = document.getElementById('price')
     const amountInput = document.getElementById('amount')
@@ -213,27 +235,100 @@
     async function loadProducts() {
         try {
             productList = await products.list()
-            productsDatalist.innerHTML = ''
-            productList.forEach(prod => {
-                const option = document.createElement('option')
-                option.value = `${prod.code} - ${prod.name} (${prod.price}元)`
-                option.dataset.id = prod.id
-                option.dataset.price = prod.price
-                option.dataset.name = prod.name
-                option.dataset.code = prod.code
-                productsDatalist.appendChild(option)
-            })
+            loadProductsToDatalist()
         } catch (error) {
             console.error('加载产品失败:', error)
         }
     }
 
-    // 产品选择事件
-    productInput.addEventListener('input', function() {
-        const selectedOption = Array.from(productsDatalist.options).find(opt => opt.value === this.value)
-        if (selectedOption && selectedOption.dataset.price) {
-            priceInput.value = selectedOption.dataset.price
+    // 加载产品到datalist（用于产品名称搜索）
+    function loadProductsToDatalist() {
+        productsDatalist.innerHTML = ''
+        productList.forEach(prod => {
+            const option = document.createElement('option')
+            option.value = prod.name
+            option.dataset.price = prod.price
+            option.dataset.code = prod.code
+            productsDatalist.appendChild(option)
+        })
+    }
+
+    // 显示商品编码自动完成列表
+    function showAutocompleteCode() {
+        const input = productCodeInput.value.toLowerCase()
+        autocompleteListCode.innerHTML = ''
+
+        if (!input) {
+            autocompleteListCode.style.display = 'none'
+            return
+        }
+
+        const filteredCodes = productList.filter(prod =>
+            prod.code.toLowerCase().includes(input)
+        )
+
+        if (filteredCodes.length === 0) {
+            autocompleteListCode.style.display = 'none'
+            return
+        }
+
+        filteredCodes.forEach(prod => {
+            const item = document.createElement('div')
+            item.className = 'autocomplete-item'
+            item.innerHTML = `<strong>${prod.code}</strong><br><small>${prod.name} - ${prod.price}元</small>`
+            item.addEventListener('click', function() {
+                productCodeInput.value = prod.code
+                productNameInput.value = prod.name
+                priceInput.value = prod.price
+                calculateAmount()
+                autocompleteListCode.style.display = 'none'
+            })
+            autocompleteListCode.appendChild(item)
+        })
+
+        autocompleteListCode.style.display = 'block'
+    }
+
+    // 商品编码输入事件
+    productCodeInput.addEventListener('input', function() {
+        showAutocompleteCode()
+        // 根据编码查找产品
+        const code = this.value.trim()
+        const product = productList.find(p => p.code === code)
+        if (product) {
+            productNameInput.value = product.name
+            priceInput.value = product.price
             calculateAmount()
+        }
+    })
+
+    // 产品名称自动完成
+    productNameInput.addEventListener('input', function() {
+        const name = this.value.trim()
+        // 查找匹配的产品
+        const product = productList.find(p => p.name === name)
+        if (product) {
+            priceInput.value = product.price
+            calculateAmount()
+        } else if (name === '其他') {
+            priceInput.value = ''
+            amountInput.value = ''
+        }
+    })
+
+    productNameInput.addEventListener('change', function() {
+        const name = this.value.trim()
+        const product = productList.find(p => p.name === name)
+        if (product) {
+            priceInput.value = product.price
+            calculateAmount()
+        }
+    })
+
+    // 点击页面其他地方隐藏自动完成列表
+    document.addEventListener('click', function(e) {
+        if (e.target !== productCodeInput) {
+            autocompleteListCode.style.display = 'none'
         }
     })
 
@@ -262,12 +357,14 @@
 
         if (allRecords.length === 0) {
             recordsTable.style.display = 'none'
+            document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
             document.getElementById('total-amount').textContent = '0.00'
             return
         }
 
         recordsTable.style.display = 'table'
+        document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
         let total = 0
@@ -276,7 +373,6 @@
             const row = document.createElement('tr')
             const employeeName = record.employee?.name || ''
             const productName = record.product?.name || ''
-            const productCode = record.product?.code || ''
             const productPrice = parseFloat(record.unit_price) || 0
             const amount = parseFloat(record.total_amount) || 0
             total += amount
@@ -284,6 +380,7 @@
             const returnDisplay = record.is_return ? '<span class="return-tag">退返</span>' : ''
 
             row.innerHTML = `
+                <td><input type="checkbox" class="record-checkbox" data-id="${record.id}"></td>
                 <td>${record.record_date}</td>
                 <td>${employeeName}</td>
                 <td>${productName}</td>
@@ -293,6 +390,15 @@
                 <td>${returnDisplay}</td>
                 <td style="text-align: center;"><button class="delete-btn" data-id="${record.id}" title="删除"><i class="fas fa-times"></i></button></td>
             `
+
+            // 行点击选择
+            row.addEventListener('click', function(e) {
+                if (e.target.type !== 'checkbox' && !e.target.closest('.delete-btn')) {
+                    const checkbox = row.querySelector('.record-checkbox')
+                    checkbox.checked = !checkbox.checked
+                    updateSelectedCount()
+                }
+            })
 
             row.querySelector('.delete-btn').addEventListener('click', async function() {
                 if (confirm('确定要删除这条记录吗？')) {
@@ -311,6 +417,40 @@
         })
 
         document.getElementById('total-amount').textContent = total.toFixed(2)
+        updateSelectedCount()
+    }
+
+    // 更新选中数量
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked')
+        document.getElementById('selected-count').textContent = checkboxes.length
+    }
+
+    // 批量删除选中记录
+    async function batchDeleteRecords() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked')
+        if (checkboxes.length === 0) {
+            alert('请先选择要删除的记录')
+            return
+        }
+
+        if (!confirm(`确定要删除选中的 ${checkboxes.length} 条记录吗？`)) {
+            return
+        }
+
+        const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id))
+
+        try {
+            for (const id of selectedIds) {
+                await salesRecords.delete(id)
+            }
+            allRecords = allRecords.filter(r => !selectedIds.includes(r.id))
+            renderRecords()
+            alert(`成功删除 ${selectedIds.length} 条记录`)
+        } catch (error) {
+            console.error('批量删除失败:', error)
+            alert('删除失败，请重试')
+        }
     }
 
     // 自动计算金额
@@ -323,7 +463,8 @@
     // 添加记录
     async function addRecord() {
         const employeeId = nameSelect.value
-        const productInputValue = productInput.value
+        const productName = productNameInput.value.trim()
+        const productCode = productCodeInput.value.trim()
         const quantity = parseFloat(quantityInput.value)
         const price = parseFloat(priceInput.value)
         const amount = parseFloat(amountInput.value)
@@ -339,14 +480,14 @@
             return
         }
 
-        // 通过输入值查找对应的产品
-        const selectedOption = Array.from(productsDatalist.options).find(opt => opt.value === productInputValue)
-        if (!selectedOption || !selectedOption.dataset.id) {
+        // 通过产品名称查找对应的产品
+        const product = productList.find(p => p.name === productName)
+        if (!product) {
             alert('请从列表中选择产品')
             return
         }
 
-        const productId = parseInt(selectedOption.dataset.id)
+        const productId = product.id
 
         if (!quantity || quantity <= 0) {
             alert('请输入有效的数量')
@@ -474,7 +615,8 @@
 
     document.getElementById('reset-btn').addEventListener('click', function() {
         nameSelect.value = ''
-        productInput.value = ''
+        productCodeInput.value = ''
+        productNameInput.value = ''
         quantityInput.value = 1
         priceInput.value = ''
         amountInput.value = ''
@@ -483,6 +625,40 @@
     })
 
     exportButton.addEventListener('click', exportExcel)
+
+    // 全选复选框（表格头部）
+    document.getElementById('select-all-header').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.record-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 全选复选框（批量操作栏）
+    document.getElementById('select-all').addEventListener('change', function() {
+        const headerCheckbox = document.getElementById('select-all-header')
+        headerCheckbox.checked = this.checked
+        const checkboxes = document.querySelectorAll('.record-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 表格内复选框点击事件
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('record-checkbox')) {
+            updateSelectedCount()
+            // 同步两个全选复选框状态
+            const allCheckboxes = document.querySelectorAll('.record-checkbox')
+            const checkedBoxes = document.querySelectorAll('.record-checkbox:checked')
+            const headerCheckbox = document.getElementById('select-all-header')
+            const topCheckbox = document.getElementById('select-all')
+            const allChecked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length
+            headerCheckbox.checked = allChecked
+            topCheckbox.checked = allChecked
+        }
+    })
+
+    // 批量删除按钮
+    document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteRecords)
 
     // 初始化
     async function init() {

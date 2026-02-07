@@ -38,6 +38,16 @@
     <section>
         <h2 class="section-title"><i class="fas fa-list"></i> 人员列表</h2>
 
+        <div id="batch-actions" style="display: none; margin-bottom: 15px;">
+            <label style="display: inline-flex; align-items: center; gap: 8px; margin-right: 15px;">
+                <input type="checkbox" id="select-all">
+                <span>全选</span>
+            </label>
+            <button id="batch-delete-btn" class="btn-danger" style="padding: 10px 15px; font-size: 0.9rem;">
+                <i class="fas fa-trash"></i> 删除选中 (<span id="selected-count">0</span>)
+            </button>
+        </div>
+
         <div id="loading" class="loading" style="display: none;">
             <i class="fas fa-spinner"></i>
             <p>加载中...</p>
@@ -47,6 +57,7 @@
             <table id="employees-table" style="display: none;">
                 <thead>
                 <tr>
+                    <th style="width: 30px;"><input type="checkbox" id="select-all-header"></th>
                     <th>姓名</th>
                     <th>添加时间</th>
                     <th>操作</th>
@@ -102,11 +113,13 @@
 
         if (employeeList.length === 0) {
             employeesTable.style.display = 'none'
+            document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
             return
         }
 
         employeesTable.style.display = 'table'
+        document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
         employeeList.forEach(emp => {
@@ -114,6 +127,7 @@
             const createdAt = new Date(emp.created_at).toLocaleString('zh-CN')
 
             row.innerHTML = `
+                <td><input type="checkbox" class="employee-checkbox" data-id="${emp.id}"></td>
                 <td>${emp.name}</td>
                 <td>${createdAt}</td>
                 <td>
@@ -122,14 +136,18 @@
             `
 
             row.querySelector('.delete-btn').addEventListener('click', async function() {
-                if (confirm(`确定要删除 "${emp.name}" 吗？\n注意：删除人员后，该人员的记账记录仍会保留，但无法在新增时选择。`)) {
+                if (confirm(`确定要删除 "${emp.name}" 吗？`)) {
                     try {
                         await employees.delete(emp.id)
                         employeeList = employeeList.filter(e => e.id !== emp.id)
                         renderEmployees()
                     } catch (error) {
                         console.error('删除失败:', error)
-                        alert('删除失败，请重试')
+                        if (error.message && error.message.includes('foreign key constraint')) {
+                            alert('删除失败：该人员还有记账记录，请先删除相关记录后再删除人员。')
+                        } else {
+                            alert('删除失败，请重试')
+                        }
                     }
                 }
             })
@@ -175,6 +193,76 @@
             addEmployee()
         }
     })
+
+    // 更新选中数量
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.employee-checkbox:checked')
+        document.getElementById('selected-count').textContent = checkboxes.length
+    }
+
+    // 批量删除选中人员
+    async function batchDeleteEmployees() {
+        const checkboxes = document.querySelectorAll('.employee-checkbox:checked')
+        if (checkboxes.length === 0) {
+            alert('请先选择要删除的人员')
+            return
+        }
+
+        if (!confirm(`确定要删除选中的 ${checkboxes.length} 个人员吗？`)) {
+            return
+        }
+
+        const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id))
+
+        try {
+            for (const id of selectedIds) {
+                await employees.delete(id)
+            }
+            employeeList = employeeList.filter(e => !selectedIds.includes(e.id))
+            renderEmployees()
+            alert(`成功删除 ${selectedIds.length} 个人员`)
+        } catch (error) {
+            console.error('批量删除失败:', error)
+            if (error.message && error.message.includes('foreign key constraint')) {
+                alert('删除失败：部分人员还有关联记录，请先删除相关记录后再删除人员。')
+            } else {
+                alert('删除失败，请重试')
+            }
+        }
+    }
+
+    // 全选复选框（表格头部）
+    document.getElementById('select-all-header').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.employee-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 全选复选框（批量操作栏）
+    document.getElementById('select-all').addEventListener('change', function() {
+        const headerCheckbox = document.getElementById('select-all-header')
+        headerCheckbox.checked = this.checked
+        const checkboxes = document.querySelectorAll('.employee-checkbox')
+        checkboxes.forEach(cb => cb.checked = this.checked)
+        updateSelectedCount()
+    })
+
+    // 表格内复选框点击事件
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('employee-checkbox')) {
+            updateSelectedCount()
+            const allCheckboxes = document.querySelectorAll('.employee-checkbox')
+            const checkedBoxes = document.querySelectorAll('.employee-checkbox:checked')
+            const headerCheckbox = document.getElementById('select-all-header')
+            const topCheckbox = document.getElementById('select-all')
+            const allChecked = allCheckboxes.length > 0 && allCheckboxes.length === checkedBoxes.length
+            headerCheckbox.checked = allChecked
+            topCheckbox.checked = allChecked
+        }
+    })
+
+    // 批量删除按钮
+    document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteEmployees)
 
     // 初始化
     loadEmployees()
