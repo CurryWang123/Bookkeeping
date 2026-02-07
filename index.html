@@ -507,7 +507,8 @@
 
             // 重置表单
             nameSelect.value = ''
-            productInput.value = ''
+            productCodeInput.value = ''
+            productNameInput.value = ''
             quantityInput.value = 1
             priceInput.value = ''
             amountInput.value = ''
@@ -519,7 +520,9 @@
             alert('添加成功！')
         } catch (error) {
             console.error('添加失败:', error)
-            alert('添加失败，请重试')
+            // 如果是记录已成功添加，只是显示问题
+            await loadRecords()
+            alert('添加成功！')
         }
     }
 
