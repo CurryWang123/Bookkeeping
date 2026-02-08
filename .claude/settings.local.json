@@ -4,7 +4,10 @@
       "Bash(dir:*)",
       "Bash(supabase --help:*)",
       "Bash(supabase db --help:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(powershell:*)",
+      "Bash(del:*)",
+      "Bash(ren:*)"
     ]
   }
 }

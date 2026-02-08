@@ -157,6 +157,17 @@
                 <i class="fas fa-clipboard-list" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
                 <p>暂无记账记录，请添加第一条记录</p>
             </div>
+
+            <!-- 分页控件 -->
+            <div id="pagination" class="pagination" style="display: none;">
+                <button id="prev-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="page-info" style="padding: 0 10px; font-size: 0.9rem;">第 1 / 1 页</span>
+                <button id="next-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </div>
     </section>
 
@@ -173,6 +184,8 @@
     let allRecords = []
     let employeeList = []
     let productList = []
+    let currentPage = 1
+    const pageSize = 10
 
     // DOM元素
     const dateInput = document.getElementById('date')
@@ -360,6 +373,7 @@
             document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
             document.getElementById('total-amount').textContent = '0.00'
+            document.getElementById('pagination').style.display = 'none'
             return
         }
 
@@ -367,9 +381,21 @@
         document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
+        // 计算分页
+        const totalPages = Math.ceil(allRecords.length / pageSize)
+        const startIndex = (currentPage - 1) * pageSize
+        const endIndex = Math.min(startIndex + pageSize, allRecords.length)
+        const pageRecords = allRecords.slice(startIndex, endIndex)
+
+        // 更新分页控件
+        document.getElementById('pagination').style.display = 'flex'
+        document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 页 (${startIndex + 1}-${endIndex} / 共 ${allRecords.length} 条)`
+        document.getElementById('prev-page').disabled = currentPage === 1
+        document.getElementById('next-page').disabled = currentPage === totalPages
+
         let total = 0
 
-        allRecords.forEach(record => {
+        pageRecords.forEach(record => {
             const row = document.createElement('tr')
             const employeeName = record.employee?.name || ''
             const productName = record.product?.name || ''
@@ -662,6 +688,22 @@
 
     // 批量删除按钮
     document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteRecords)
+
+    // 分页事件
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--
+            renderRecords()
+        }
+    })
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const totalPages = Math.ceil(allRecords.length / pageSize)
+        if (currentPage < totalPages) {
+            currentPage++
+            renderRecords()
+        }
+    })
 
     // 初始化
     async function init() {

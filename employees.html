@@ -71,6 +71,17 @@
                 <i class="fas fa-user-friends" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
                 <p>暂无人员数据，请添加</p>
             </div>
+
+            <!-- 分页控件 -->
+            <div id="pagination" class="pagination" style="display: none;">
+                <button id="prev-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="page-info" style="padding: 0 10px; font-size: 0.9rem;">第 1 / 1 页</span>
+                <button id="next-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </div>
     </section>
 
@@ -83,6 +94,8 @@
     import { employees } from './js/db.js'
 
     let employeeList = []
+    let currentPage = 1
+    const pageSize = 10
 
     const addBtn = document.getElementById('add-btn')
     const employeeNameInput = document.getElementById('employee-name')
@@ -115,6 +128,7 @@
             employeesTable.style.display = 'none'
             document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
+            document.getElementById('pagination').style.display = 'none'
             return
         }
 
@@ -122,7 +136,19 @@
         document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
-        employeeList.forEach(emp => {
+        // 计算分页
+        const totalPages = Math.ceil(employeeList.length / pageSize)
+        const startIndex = (currentPage - 1) * pageSize
+        const endIndex = Math.min(startIndex + pageSize, employeeList.length)
+        const pageEmployees = employeeList.slice(startIndex, endIndex)
+
+        // 更新分页控件
+        document.getElementById('pagination').style.display = 'flex'
+        document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 页 (${startIndex + 1}-${endIndex} / 共 ${employeeList.length} 条)`
+        document.getElementById('prev-page').disabled = currentPage === 1
+        document.getElementById('next-page').disabled = currentPage === totalPages
+
+        pageEmployees.forEach(emp => {
             const row = document.createElement('tr')
             const createdAt = new Date(emp.created_at).toLocaleString('zh-CN')
 
@@ -263,6 +289,22 @@
 
     // 批量删除按钮
     document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteEmployees)
+
+    // 分页事件
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--
+            renderEmployees()
+        }
+    })
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const totalPages = Math.ceil(employeeList.length / pageSize)
+        if (currentPage < totalPages) {
+            currentPage++
+            renderEmployees()
+        }
+    })
 
     // 初始化
     loadEmployees()

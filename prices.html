@@ -89,6 +89,17 @@
                 <i class="fas fa-boxes" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
                 <p>暂无产品数据，请添加或导入</p>
             </div>
+
+            <!-- 分页控件 -->
+            <div id="pagination" class="pagination" style="display: none;">
+                <button id="prev-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="page-info" style="padding: 0 10px; font-size: 0.9rem;">第 1 / 1 页</span>
+                <button id="next-page" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; min-width: auto;">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </div>
     </section>
 
@@ -133,6 +144,8 @@
 
     let productList = []
     let editingId = null
+    let currentPage = 1
+    const pageSize = 10
 
     const addBtn = document.getElementById('add-btn')
     const importBtn = document.getElementById('import-btn')
@@ -174,6 +187,7 @@
             productsTable.style.display = 'none'
             document.getElementById('batch-actions').style.display = 'none'
             emptyMessage.style.display = 'block'
+            document.getElementById('pagination').style.display = 'none'
             return
         }
 
@@ -181,7 +195,19 @@
         document.getElementById('batch-actions').style.display = 'block'
         emptyMessage.style.display = 'none'
 
-        productList.forEach(prod => {
+        // 计算分页
+        const totalPages = Math.ceil(productList.length / pageSize)
+        const startIndex = (currentPage - 1) * pageSize
+        const endIndex = Math.min(startIndex + pageSize, productList.length)
+        const pageProducts = productList.slice(startIndex, endIndex)
+
+        // 更新分页控件
+        document.getElementById('pagination').style.display = 'flex'
+        document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 页 (${startIndex + 1}-${endIndex} / 共 ${productList.length} 条)`
+        document.getElementById('prev-page').disabled = currentPage === 1
+        document.getElementById('next-page').disabled = currentPage === totalPages
+
+        pageProducts.forEach(prod => {
             const row = document.createElement('tr')
             row.style.cursor = 'pointer'
             row.innerHTML = `
@@ -206,10 +232,21 @@
                     try {
                         await products.delete(prod.id)
                         productList = productList.filter(p => p.id !== prod.id)
+                        // 重新计算页码
+                        const totalPages = Math.ceil(productList.length / pageSize)
+                        if (currentPage > totalPages && totalPages > 0) {
+                            currentPage = totalPages
+                        }
                         renderProducts()
                     } catch (error) {
                         console.error('删除失败:', error)
-                        alert('删除失败，请重试')
+                        if (error.message && error.message.includes('foreign key constraint')) {
+                            alert('删除失败：该产品还有关联的记账记录，请先删除相关记录后再删除产品。')
+                        } else if (error.message && error.message.includes('RLS')) {
+                            alert('删除失败：没有权限执行此操作，请联系管理员检查数据库权限设置。')
+                        } else {
+                            alert('删除失败，请重试。错误信息：' + (error.message || '未知错误'))
+                        }
                     }
                 }
             })
@@ -394,11 +431,22 @@
                 await products.delete(id)
             }
             productList = productList.filter(p => !selectedIds.includes(p.id))
+            // 重新计算页码
+            const totalPages = Math.ceil(productList.length / pageSize)
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages
+            }
             renderProducts()
             alert(`成功删除 ${selectedIds.length} 个产品`)
         } catch (error) {
             console.error('批量删除失败:', error)
-            alert('删除失败，请重试')
+            if (error.message && error.message.includes('foreign key constraint')) {
+                alert('删除失败：部分产品还有关联的记账记录，请先删除相关记录后再删除产品。')
+            } else if (error.message && error.message.includes('RLS')) {
+                alert('删除失败：没有权限执行此操作，请联系管理员检查数据库权限设置。')
+            } else {
+                alert('删除失败，请重试。错误信息：' + (error.message || '未知错误'))
+            }
         }
     }
 
@@ -434,6 +482,22 @@
 
     // 批量删除按钮
     document.getElementById('batch-delete-btn').addEventListener('click', batchDeleteProducts)
+
+    // 分页事件
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--
+            renderProducts()
+        }
+    })
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const totalPages = Math.ceil(productList.length / pageSize)
+        if (currentPage < totalPages) {
+            currentPage++
+            renderProducts()
+        }
+    })
 
     // 初始化
     loadProducts()
